@@ -1,0 +1,113 @@
+#!/bin/bash
+
+# Function to display the manual page
+function display_manual() {
+  echo "internsctl - Custom Linux Command v0.1.0"
+  echo "Usage: internsctl [OPTIONS] COMMAND [ARGS]"
+  echo "Custom Linux command for various operations."
+  echo ""
+  echo "Options:"
+  echo "  --version    Display the command version"
+  echo "  --help       Display help for the command"
+  echo ""
+  echo "Commands:"
+  echo "  cpu getinfo          Get CPU information"
+  echo "  memory getinfo       Get Memory information"
+  echo "  user create <username>  Create a new user"
+  echo "  user list            List all regular users"
+  echo "  user list --sudo-only  List users with sudo permissions"
+  echo "  file getinfo [OPTIONS] <file-name>  Get file information"
+  echo ""
+}
+
+# Function to display version information
+function display_version() {
+  echo "internsctl v0.1.0"
+}
+
+# Function to get CPU information
+function get_cpu_info() {
+  lscpu
+}
+
+# Function to get memory information
+function get_memory_info() {
+  free
+}
+
+# Function to create a new user
+function create_user() {
+  if [ $# -ne 2 ]; then
+    echo "Usage: internsctl user create <username>"
+    exit 1
+  fi
+  username="$2"
+  sudo useradd -m "$username"
+  sudo passwd "$username"
+  echo "User '$username' created and can now log in."
+}
+
+# Function to list users
+function list_users() {
+  if [ "$1" == "--sudo-only" ]; then
+    getent group sudo | cut -d: -f4
+  else
+    cut -d: -f1 /etc/passwd
+  fi
+}
+
+# Function to get file information
+function get_file_info() {
+  if [ ! -f "$2" ]; then
+    echo "File not found: $2"
+    exit 1
+  fi
+
+  file_name="$2"
+
+  if [ "$3" == "--size" ] || [ "$3" == "-s" ]; then
+    stat -c %s "$file_name"
+  elif [ "$3" == "--permissions" ] || [ "$3" == "-p" ]; then
+    stat -c %A "$file_name"
+  elif [ "$3" == "--owner" ] || [ "$3" == "-o" ]; then
+    stat -c %U "$file_name"
+  elif [ "$3" == "--last-modified" ] || [ "$3" == "-m" ]; then
+    stat -c %y "$file_name"
+  else
+    echo "File: $file_name"
+    stat -c "Access: %A\nSize(B): %s\nOwner: %U\nModify: %y" "$file_name"
+  fi
+}
+
+# Main script
+case "$1" in
+  "cpu" )
+    get_cpu_info
+    ;;
+  "memory" )
+    get_memory_info
+    ;;
+  "user" )
+    case "$2" in
+      "create" )
+        create_user "$@"
+        ;;
+      "list" )
+        list_users "$3"
+        ;;
+    esac
+    ;;
+  "file" )
+    get_file_info "$@"
+    ;;
+  "--version" )
+    display_version
+    ;;
+  "--help" )
+    display_manual
+    ;;
+  * )
+    echo "Invalid command. Use 'internsctl --help' for usage information."
+    exit 1
+    ;;
+esac
